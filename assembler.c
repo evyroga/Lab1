@@ -6,6 +6,24 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+void createSymbolTable(FILE* inputFile) {
+	// First pass: Create symbol table
+	char lineBuffer[255];
+	while(fgets(lineBuffer, 255, (FILE*) inputFile)) {
+		// get .ORIG location
+		char delimiter[] = " ";
+		char* instruction = strtok(lineBuffer, delimiter);
+		if (strcmp(instruction, ".ORIG") == 0) {
+			char* firstLocation = strtok(NULL, delimiter);
+			// TO DO: CHECK IF LOCATION VALID
+			// variable firstLocation contains hex number
+			printf(firstLocation);
+
+		}
+	}
+}
 
 void main(int argc, char *argv[]) {
 	char *input = argv[1];
@@ -15,10 +33,8 @@ void main(int argc, char *argv[]) {
 	// create output file
 	FILE *newFilePointer = fopen(output, "w");
 
-	// Parse lines from input file and write to output file
-	char lineBuffer[255];
-	while(fgets(lineBuffer, 255, (FILE*) inputFile)) {
-		fprintf(newFilePointer, lineBuffer);
-	}
+	// create Symbol Table
+	createSymbolTable(inputFile);
+
 	exit(0);
 }
