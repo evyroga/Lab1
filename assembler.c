@@ -3,6 +3,7 @@
  *
  *  Created on: Sep 17, 2018
  *      Author: Vivian
+ 				Morgan
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,10 +11,21 @@
 #include <ctype.h>
 
 #define MAX_LINE_LENGTH 255
+#define MAX_SYMBOLS 255
+#define MAX_LABEL_LEN 20 
 enum
 {
    DONE, OK, EMPTY_LINE
 };
+
+//Symbol Table struct and array:
+struct TableEntry{
+	char label[MAX_LABEL_LEN+1];	// label name, +1 because null terminated
+	int location; //memory address, not including 'x'
+};
+TableEntry symboltable[MAX_SYMBOLS]; 
+int Tablesize = 0; //number of symbols on table
+
 
 // Returns either an OPCODE or a potential LABEL
 int isOpcode(char* opcode) {
@@ -86,6 +98,70 @@ int readAndParse( FILE * pInfile, char * pLine, char ** pLabel, char ** pOpcode,
 
 }
 
+/*** convert string to int ***/
+int toNum( char * pStr ){
+   char * t_ptr;
+   char * orig_pStr;
+   int t_length,k;
+   int lNum, lNeg = 0;
+   long int lNumLong;
+
+   orig_pStr = pStr;
+   if( *pStr == '#' )				/* decimal */
+   { 
+     pStr++;
+     if( *pStr == '-' )				/* dec is negative */
+     {
+       lNeg = 1;
+       pStr++;
+     }
+     t_ptr = pStr;
+     t_length = strlen(t_ptr);
+     for(k=0;k < t_length;k++)
+     {
+       if (!isdigit(*t_ptr))
+       {
+	 printf("Error: invalid decimal operand, %s\n",orig_pStr);
+	 exit(4);
+       }
+       t_ptr++;
+     }
+     lNum = atoi(pStr);
+     if (lNeg)
+       lNum = -lNum;
+ 
+     return lNum;
+   }
+   else if( *pStr == 'x' )	/* hex     */
+   {
+     pStr++;
+     if( *pStr == '-' )				/* hex is negative */
+     {
+       lNeg = 1;
+       pStr++;
+     }
+     t_ptr = pStr;
+     t_length = strlen(t_ptr);
+     for(k=0;k < t_length;k++)
+     {
+       if (!isxdigit(*t_ptr))
+       {
+	 printf("Error: invalid hex operand, %s\n",orig_pStr);
+	 exit(4);
+       }
+       t_ptr++;
+     }
+     lNumLong = strtol(pStr, NULL, 16);    /* convert hex string into integer */
+     lNum = (lNumLong > INT_MAX)? INT_MAX : lNumLong;
+     if( lNeg )
+       lNum = -lNum;
+     return lNum;
+   }else{
+	printf( "Error: invalid operand, %s\n", orig_pStr);
+	exit(4);  /* This has been changed from error code 3 to error code 4, see clarification 12 */
+   }
+}
+
 
 void createOutputObjFile(char * input, char * output) {
 	char lLine[MAX_LINE_LENGTH + 1], *lLabel, *lOpcode, *lArg1,
@@ -128,6 +204,34 @@ void createSymbolTable(FILE* inputFile) {
 			// variable firstLocation contains hex number
 			//printf(firstLocation);
 
+		}
+		if(isOpcode(orig) == -1){
+			int i_sym = 0; //index to go through char array 'orig'
+			while(*(orig+i_sym) != NULL){
+				if(isalnum(*(orig+i_sym)) == false){
+					break; //not alphanumeric, leave while loop
+					//OR replace with a "goto" to increment to next address? yes
+					//goto where
+				}
+			}
+			//leaves while loop, is a label.
+			//CHECK IF SYMBOL HAS ALREADY APPEARED
+			for(int check = 0; check < Tablesize; check++){
+				if(strcmp(orig,symboltable[check].label)){
+					//has already appeared, error code 4
+				}
+			}
+			for(int input = 0; input < i_sym; input++){
+				symboltable[Tablesize].label[input] = *(orig+input);
+			}
+			symboltable[Tablesize].label[input] = NULL;  //null terminated
+			//question: does firstLocation contain x? assuming it does ->
+			symboltable[Tablesize].location = toNum(firstLocation);
+			Tablesize++; 
+			//increment to next address but check if .END first
+
+		}else{
+			//increment to next address ^ same
 		}
 	}
 }
