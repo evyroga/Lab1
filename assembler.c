@@ -100,6 +100,11 @@ int readAndParse( FILE * pInfile, char * pLine, char ** pLabel, char ** pOpcode,
 
 }
 
+<<<<<<< HEAD
+void and() {
+
+}
+=======
 /*** convert string to int ***/
 int toNum( char * pStr ){
    char * t_ptr;
@@ -164,6 +169,7 @@ int toNum( char * pStr ){
    }
 }
 
+>>>>>>> 205d9700a0d85c53314fdfb4d0d3b450b12f47f4
 
 void createOutputObjFile(char * input, char * output) {
 	char lLine[MAX_LINE_LENGTH + 1], *lLabel, *lOpcode, *lArg1,
@@ -186,6 +192,10 @@ void createOutputObjFile(char * input, char * output) {
 			printf("lArg2 is %s\n", lArg2);
 			printf("lArg3 is %s\n", lArg3);
 			printf("lArg4 is %s\n\n", lArg4);
+			switch(isOpcodes(lOpcode))  {
+				case 0 :
+					add();
+			}
 
 
 		}
