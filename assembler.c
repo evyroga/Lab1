@@ -3,16 +3,18 @@
  *
  *  Created on: Sep 17, 2018
  *      Author: Vivian
- 				Morgan
+ 				Morgan Murrell
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <limits.h>
 
 #define MAX_LINE_LENGTH 255
 #define MAX_SYMBOLS 255
 #define MAX_LABEL_LEN 20 
+#define INT_MAX 32768
 enum
 {
    DONE, OK, EMPTY_LINE
@@ -23,7 +25,7 @@ struct TableEntry{
 	char label[MAX_LABEL_LEN+1];	// label name, +1 because null terminated
 	int location; //memory address, not including 'x'
 };
-TableEntry symboltable[MAX_SYMBOLS]; 
+struct TableEntry symboltable[MAX_SYMBOLS];
 int Tablesize = 0; //number of symbols on table
 
 
@@ -193,47 +195,55 @@ void createOutputObjFile(char * input, char * output) {
 
 void createSymbolTable(FILE* inputFile) {
 	// First pass: Create symbol table
+
+	char lLine[MAX_LINE_LENGTH + 1], *lLabel, *lOpcode, *lArg1,
+			        *lArg2, *lArg3, *lArg4;
+	int lRet;
 	char lineBuffer[255];
-	while(fgets(lineBuffer, 255, (FILE*) inputFile)) {
-		// get .ORIG location
-		char delimiter[] = " ";
-		char* orig = strtok(lineBuffer, delimiter);
-		if (strcmp(orig, ".ORIG") == 0) {
-			char* firstLocation = strtok(NULL, delimiter);
-			// TO DO: CHECK IF LOCATION VALID
-			// variable firstLocation contains hex number
-			//printf(firstLocation);
+	int cu_address;
 
-		}
-		if(isOpcode(orig) == -1){
-			int i_sym = 0; //index to go through char array 'orig'
-			while(*(orig+i_sym) != NULL){
-				if(isalnum(*(orig+i_sym)) == false){
-					break; //not alphanumeric, leave while loop
-					//OR replace with a "goto" to increment to next address? yes
-					//goto where
+		do{
+			//increment address every loop
+			lRet = readAndParse(inputFile, lLine, &lLabel,
+				&lOpcode, &lArg1, &lArg2, &lArg3, &lArg4 );
+
+			if( lRet != DONE && lRet != EMPTY_LINE ){
+					// lRet = 'OK'
+				if(strcmp(lOpcode, ".ORIG")){
+					//check if valid
+					int check_address = toNum(lArg1);
+					if(check_address >= 0 && check_address <= 32768){
+						cu_address = check_address;
+					}else{
+						exit(3); //ERROR: invalid constant
+					}
+				}
+				if(*(lLabel) != '0'){
+					//check if valid
+					int i_sym = 0;
+					while(*(lLabel+i_sym) != '0'){
+						if(isalnum(*(lLabel+i_sym)) == false){
+							goto next_address;
+							}
+					}
+					for(int check = 0; check < Tablesize; check++){
+						if(strcmp(lLabel, symboltable[check].label)){
+							exit(4); //ERROR: label appears more than once
+						}
+					}
+					for(int input = 0; input < i_sym; input++){
+						//copy into symbol table
+						symboltable[Tablesize].label[input] = *(lLabel + input);
+					}
+					symboltable[Tablesize].label[i_sym] = '0'; //null terminate char array
+					symboltable[Tablesize].location = cu_address;
+					Tablesize++;
 				}
 			}
-			//leaves while loop, is a label.
-			//CHECK IF SYMBOL HAS ALREADY APPEARED
-			for(int check = 0; check < Tablesize; check++){
-				if(strcmp(orig,symboltable[check].label)){
-					//has already appeared, error code 4
-				}
-			}
-			for(int input = 0; input < i_sym; input++){
-				symboltable[Tablesize].label[input] = *(orig+input);
-			}
-			symboltable[Tablesize].label[input] = NULL;  //null terminated
-			//question: does firstLocation contain x? assuming it does ->
-			symboltable[Tablesize].location = toNum(firstLocation);
-			Tablesize++; 
-			//increment to next address but check if .END first
+			next_address:
+			cu_address = cu_address + 2; //increment current address
+		} while( lRet != DONE );
 
-		}else{
-			//increment to next address ^ same
-		}
-	}
 }
 
 
