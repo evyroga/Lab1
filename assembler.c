@@ -4,6 +4,8 @@
  *  Created on: Sep 17, 2018
  *      Author: Vivian
  				Morgan Murrell
+
+ 				HELLO
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,14 +16,10 @@
 #define MAX_LINE_LENGTH 255
 #define MAX_SYMBOLS 255
 #define MAX_LABEL_LEN 20 
-<<<<<<< HEAD
 
 typedef int bool;
 #define true 1
 #define false 0
-=======
-#define INT_MAX 32768
->>>>>>> 620838eaa47428d4f7629c6a6f637c6969c4b8ac
 enum
 {
    DONE, OK, EMPTY_LINE
