@@ -86,6 +86,9 @@ int readAndParse( FILE * pInfile, char * pLine, char ** pLabel, char ** pOpcode,
 
 }
 
+void and() {
+
+}
 
 void createOutputObjFile(char * input, char * output) {
 	char lLine[MAX_LINE_LENGTH + 1], *lLabel, *lOpcode, *lArg1,
@@ -108,6 +111,10 @@ void createOutputObjFile(char * input, char * output) {
 			printf("lArg2 is %s\n", lArg2);
 			printf("lArg3 is %s\n", lArg3);
 			printf("lArg4 is %s\n\n", lArg4);
+			switch(isOpcodes(lOpcode))  {
+				case 0 :
+					add();
+			}
 
 
 		}
