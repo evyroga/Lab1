@@ -2,8 +2,7 @@
  * assembler.c
  *
  *  Created on: Sep 17, 2018
- *      Author: Vivian
- 				Morgan Murrell
+ *      Author: Vivian, Morgan Murrell
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +13,7 @@
 #define MAX_LINE_LENGTH 255
 #define MAX_SYMBOLS 255
 #define MAX_LABEL_LEN 20 
-#define INT_MAX 32768
+
 enum
 {
    DONE, OK, EMPTY_LINE
@@ -100,11 +99,6 @@ int readAndParse( FILE * pInfile, char * pLine, char ** pLabel, char ** pOpcode,
 
 }
 
-<<<<<<< HEAD
-void and() {
-
-}
-=======
 /*** convert string to int ***/
 int toNum( char * pStr ){
    char * t_ptr;
@@ -169,7 +163,6 @@ int toNum( char * pStr ){
    }
 }
 
->>>>>>> 205d9700a0d85c53314fdfb4d0d3b450b12f47f4
 
 void createOutputObjFile(char * input, char * output) {
 	char lLine[MAX_LINE_LENGTH + 1], *lLabel, *lOpcode, *lArg1,
