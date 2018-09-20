@@ -2,10 +2,14 @@
  * assembler.c
  *
  *  Created on: Sep 17, 2018
+<<<<<<< HEAD
  *      Author: Vivian
  				Morgan Murrell
 
  				HELLO
+=======
+ *      Author: Vivian, Morgan Murrell
+>>>>>>> 17b2d15b256e6664d20342cf0ddb28468b8b1bb9
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,9 +21,19 @@
 #define MAX_SYMBOLS 255
 #define MAX_LABEL_LEN 20 
 
+=======
+<<<<<<< HEAD
+
 typedef int bool;
 #define true 1
 #define false 0
+<<<<<<< HEAD
+=======
+=======
+#define INT_MAX 32768
+>>>>>>> 620838eaa47428d4f7629c6a6f637c6969c4b8ac
+>>>>>>> 094771180303164adfbc49033353c60a2fcbf2e5
+>>>>>>> 17b2d15b256e6664d20342cf0ddb28468b8b1bb9
 enum
 {
    DONE, OK, EMPTY_LINE
@@ -170,6 +184,15 @@ int readAndParse( FILE * pInfile, char * pLine, char ** pLabel, char ** pOpcode,
 
 }
 
+<<<<<<< HEAD
+/*** convert string to int ***/
+int toNum( char * pStr ){
+   char * t_ptr;
+   char * orig_pStr;
+   int t_length,k;
+   int lNum, lNeg = 0;
+   long int lNumLong;
+=======
 /*
 void checkNumOperands(int expectedNum, char * lArg1, char * lArg2, char* lArg3, char * lArg4) {
 	if (expectedNum == 0 && )
@@ -179,6 +202,7 @@ void add(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 	printf("This is an add");
 
 }
+>>>>>>> 094771180303164adfbc49033353c60a2fcbf2e5
 
 void and(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4) {
 	printf("This is an and");
