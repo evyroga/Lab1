@@ -13,7 +13,18 @@
 #define MAX_LINE_LENGTH 255
 #define MAX_SYMBOLS 255
 #define MAX_LABEL_LEN 20 
+<<<<<<< HEAD
 
+=======
+<<<<<<< HEAD
+
+typedef int bool;
+#define true 1
+#define false 0
+=======
+#define INT_MAX 32768
+>>>>>>> 620838eaa47428d4f7629c6a6f637c6969c4b8ac
+>>>>>>> 094771180303164adfbc49033353c60a2fcbf2e5
 enum
 {
    DONE, OK, EMPTY_LINE
@@ -26,6 +37,71 @@ struct TableEntry{
 };
 struct TableEntry symboltable[MAX_SYMBOLS];
 int Tablesize = 0; //number of symbols on table
+
+/*** convert string to int ***/
+int toNum( char * pStr ){
+   char * t_ptr;
+   char * orig_pStr;
+   int t_length,k;
+   int lNum, lNeg = 0;
+   long int lNumLong;
+
+   orig_pStr = pStr;
+   if( *pStr == '#' )				/* decimal */
+   {
+     pStr++;
+     if( *pStr == '-' )				/* dec is negative */
+     {
+       lNeg = 1;
+       pStr++;
+     }
+     t_ptr = pStr;
+     t_length = strlen(t_ptr);
+     for(k=0;k < t_length;k++)
+     {
+       if (!isdigit(*t_ptr))
+       {
+	 printf("Error: invalid decimal operand, %s\n",orig_pStr);
+	 exit(4);
+       }
+       t_ptr++;
+     }
+     lNum = atoi(pStr);
+     if (lNeg)
+       lNum = -lNum;
+
+     return lNum;
+   }
+   else if( *pStr == 'x' )	/* hex     */
+   {
+     pStr++;
+     if( *pStr == '-' )				/* hex is negative */
+     {
+       lNeg = 1;
+       pStr++;
+     }
+     t_ptr = pStr;
+     t_length = strlen(t_ptr);
+     for(k=0;k < t_length;k++)
+     {
+       if (!isxdigit(*t_ptr))
+       {
+	 printf("Error: invalid hex operand, %s\n",orig_pStr);
+	 exit(4);
+       }
+       t_ptr++;
+     }
+     lNumLong = strtol(pStr, NULL, 16);    /* convert hex string into integer */
+     lNum = (lNumLong > INT_MAX)? INT_MAX : lNumLong;
+     if( lNeg )
+       lNum = -lNum;
+     return lNum;
+   }else{
+	printf( "Error: invalid operand, %s\n", orig_pStr);
+	exit(4);  /* This has been changed from error code 3 to error code 4, see clarification 12 */
+   }
+}
+
 
 
 // Returns either an OPCODE or a potential LABEL
@@ -99,6 +175,7 @@ int readAndParse( FILE * pInfile, char * pLine, char ** pLabel, char ** pOpcode,
 
 }
 
+<<<<<<< HEAD
 /*** convert string to int ***/
 int toNum( char * pStr ){
    char * t_ptr;
@@ -106,61 +183,20 @@ int toNum( char * pStr ){
    int t_length,k;
    int lNum, lNeg = 0;
    long int lNumLong;
+=======
+/*
+void checkNumOperands(int expectedNum, char * lArg1, char * lArg2, char* lArg3, char * lArg4) {
+	if (expectedNum == 0 && )
+}*/
 
-   orig_pStr = pStr;
-   if( *pStr == '#' )				/* decimal */
-   { 
-     pStr++;
-     if( *pStr == '-' )				/* dec is negative */
-     {
-       lNeg = 1;
-       pStr++;
-     }
-     t_ptr = pStr;
-     t_length = strlen(t_ptr);
-     for(k=0;k < t_length;k++)
-     {
-       if (!isdigit(*t_ptr))
-       {
-	 printf("Error: invalid decimal operand, %s\n",orig_pStr);
-	 exit(4);
-       }
-       t_ptr++;
-     }
-     lNum = atoi(pStr);
-     if (lNeg)
-       lNum = -lNum;
- 
-     return lNum;
-   }
-   else if( *pStr == 'x' )	/* hex     */
-   {
-     pStr++;
-     if( *pStr == '-' )				/* hex is negative */
-     {
-       lNeg = 1;
-       pStr++;
-     }
-     t_ptr = pStr;
-     t_length = strlen(t_ptr);
-     for(k=0;k < t_length;k++)
-     {
-       if (!isxdigit(*t_ptr))
-       {
-	 printf("Error: invalid hex operand, %s\n",orig_pStr);
-	 exit(4);
-       }
-       t_ptr++;
-     }
-     lNumLong = strtol(pStr, NULL, 16);    /* convert hex string into integer */
-     lNum = (lNumLong > INT_MAX)? INT_MAX : lNumLong;
-     if( lNeg )
-       lNum = -lNum;
-     return lNum;
-   }else{
-	printf( "Error: invalid operand, %s\n", orig_pStr);
-	exit(4);  /* This has been changed from error code 3 to error code 4, see clarification 12 */
-   }
+void add(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4) {
+	printf("This is an add");
+
+}
+>>>>>>> 094771180303164adfbc49033353c60a2fcbf2e5
+
+void and(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4) {
+	printf("This is an and");
 }
 
 
@@ -185,17 +221,48 @@ void createOutputObjFile(char * input, char * output) {
 			printf("lArg2 is %s\n", lArg2);
 			printf("lArg3 is %s\n", lArg3);
 			printf("lArg4 is %s\n\n", lArg4);
-			switch(isOpcodes(lOpcode))  {
-				case 0 :
-					add();
+
+			if (strcmp(lArg4, "\0") == 0) {
+				printf("lArg4 is '\0'");
 			}
 
-
+			if (strcmp(lOpcode, "add") == 0) add(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "and") == 0) and(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			/*else if (strcmp(lOpcode, "brn") == 0) brn(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "brp") == 0) brp(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "brnp") == 0) brnp(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "br") == 0) br(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "brz") == 0) brz(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "brnz") == 0) brnz(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "brzp") == 0) brzp(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "brnzp") == 0) brnzp(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "halt") == 0) halt(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "jmp") == 0) jmp(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "jsr") == 0) jsr(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "jsrr") == 0) jsrr(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "ldb") == 0) ldb(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "ldw") == 0) ldw(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "lea") == 0) lea(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "nop") == 0) nop(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "not") == 0) not(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "ret") == 0) ret(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "lshf") == 0) lsfh(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "rshfl") == 0) rshfl(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "rshfa") == 0) rshfa(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "rti") == 0) rti(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "stb") == 0) stb(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "stw") == 0) stw(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "trap") == 0) trap(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			else if (strcmp(lOpcode, "xor") == 0) xor(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			// TO DO: Change to error!
+			else printf("Not a valid opcode!");
+*/
 		}
 	} while( lRet != DONE );
 
 }
 
+/*
 void createSymbolTable(FILE* inputFile) {
 	// First pass: Create symbol table
 
@@ -248,6 +315,7 @@ void createSymbolTable(FILE* inputFile) {
 		} while( lRet != DONE );
 
 }
+*/
 
 
 /*
@@ -299,7 +367,7 @@ void main(int argc, char *argv[]) {
 	}
 
 	// first pass: create Symbol Table
-	createSymbolTable(inputFile);
+	//createSymbolTable(inputFile);
 
 	// second pass: assembly language to machine language
 	createOutputObjFile(input, output);
