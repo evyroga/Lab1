@@ -2,14 +2,8 @@
  * assembler.c
  *
  *  Created on: Sep 17, 2018
-<<<<<<< HEAD
- *      Author: Vivian
- 				Morgan Murrell
-
- 				HELLO
-=======
+ * 
  *      Author: Vivian, Morgan Murrell
->>>>>>> 17b2d15b256e6664d20342cf0ddb28468b8b1bb9
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,19 +15,10 @@
 #define MAX_SYMBOLS 255
 #define MAX_LABEL_LEN 20 
 
-=======
-<<<<<<< HEAD
-
 typedef int bool;
 #define true 1
 #define false 0
-<<<<<<< HEAD
-=======
-=======
-#define INT_MAX 32768
->>>>>>> 620838eaa47428d4f7629c6a6f637c6969c4b8ac
->>>>>>> 094771180303164adfbc49033353c60a2fcbf2e5
->>>>>>> 17b2d15b256e6664d20342cf0ddb28468b8b1bb9
+
 enum
 {
    DONE, OK, EMPTY_LINE
@@ -184,15 +169,6 @@ int readAndParse( FILE * pInfile, char * pLine, char ** pLabel, char ** pOpcode,
 
 }
 
-<<<<<<< HEAD
-/*** convert string to int ***/
-int toNum( char * pStr ){
-   char * t_ptr;
-   char * orig_pStr;
-   int t_length,k;
-   int lNum, lNeg = 0;
-   long int lNumLong;
-=======
 /*
 void checkNumOperands(int expectedNum, char * lArg1, char * lArg2, char* lArg3, char * lArg4) {
 	if (expectedNum == 0 && )
@@ -202,7 +178,7 @@ void add(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 	printf("This is an add");
 
 }
->>>>>>> 094771180303164adfbc49033353c60a2fcbf2e5
+
 
 void and(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4) {
 	printf("This is an and");
@@ -271,7 +247,7 @@ void createOutputObjFile(char * input, char * output) {
 
 }
 
-/*
+
 void createSymbolTable(FILE* inputFile) {
 	// First pass: Create symbol table
 
@@ -297,10 +273,10 @@ void createSymbolTable(FILE* inputFile) {
 						exit(3); //ERROR: invalid constant
 					}
 				}
-				if(*(lLabel) != '0'){
+				if(*(lLabel) != NULL){
 					//check if valid
 					int i_sym = 0;
-					while(*(lLabel+i_sym) != '0'){
+					while(*(lLabel+i_sym) != NULL){
 						if(isalnum(*(lLabel+i_sym)) == false){
 							goto next_address;
 							}
@@ -314,7 +290,7 @@ void createSymbolTable(FILE* inputFile) {
 						//copy into symbol table
 						symboltable[Tablesize].label[input] = *(lLabel + input);
 					}
-					symboltable[Tablesize].label[i_sym] = '0'; //null terminate char array
+					symboltable[Tablesize].label[i_sym] = NULL; //null terminate char array
 					symboltable[Tablesize].location = cu_address;
 					Tablesize++;
 				}
@@ -324,7 +300,7 @@ void createSymbolTable(FILE* inputFile) {
 		} while( lRet != DONE );
 
 }
-*/
+
 
 
 /*
@@ -363,7 +339,7 @@ void main(int argc, char *argv[]) {
 	char *input = argv[1];
 	char *output = argv[2];
 	// read in file
-	FILE *inputFile = fopen(input, "r");
+	FILE *inputFile = fopen("source.asm", "r");
 	// create output file
 	FILE *outputFile = fopen(output, "w");
 
@@ -376,7 +352,8 @@ void main(int argc, char *argv[]) {
 	}
 
 	// first pass: create Symbol Table
-	//createSymbolTable(inputFile);
+	printf("hello");
+	createSymbolTable(inputFile);
 
 	// second pass: assembly language to machine language
 	createOutputObjFile(input, output);
