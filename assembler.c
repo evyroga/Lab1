@@ -183,6 +183,7 @@ char* convertHextoCA(int hexval, char hex_arr[5]){
 
 	//convert to binary
 	for(int n = 15; n != 0; n--){
+		//check if negative
 		if((hexval - intPower(2, n)) >= 0){
 			binary_arr[15-n] = 1;
 			hexval = hexval - intPower(2,n);
@@ -295,11 +296,231 @@ int add(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3,
 
 }
 
-
-int and(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4) {
-	printf("This is an and");
+//converts r0, r1, r2, etc to binary and sets corresponding bits in bit representation array
+//pass in bit rep. array, register value in decimal form, and starting index,
+//example: DR = R1, starting index is 4
+void convertRegister(int bits[16], int regnum, int b_index){
+	for(int p = 2; p >=0; p--){
+		if(regnum - intPower(2, p) >=0){
+			bits[b_index] = 1;
+			regnum = regnum - intPower(2,p);
+		}
+		b_index++;
+	}
 }
 
+//similar to convertRegister but converts immediate value or offset value to binary
+//and set corresponding bits in bit represenation array.
+//ionum = imm/offset in decimal form, length = imm/offset size (5 for ADD/AND, 9 for LEA, etc)
+void convertOffset(int bits[16], int ionum, int b_index, int length){
+	int negLF = 0; //negative flag, 1 = negative imm/offset
+	int copy_index = b_index; //get copy of b_index in case it is zero
+	if(ionum < 0){
+		negLF = 1;
+		ionum = (-1)*ionum;
+	}
+
+	for(int p = (length-1); p >= 0; p--){
+		if((ionum - intPower(2, p)) >= 0){
+			bits[b_index] = 1;
+			ionum = ionum - intPower(2, p);
+		}
+		b_index++;
+	}
+
+	if(negLF == 1){ //convert positive to negative (binary)
+		// NOT binary, ADD 1 to binary.
+		for(int p = 0; p < length; p++){
+			bits[copy_index] = !(bits[copy_index]);
+			copy_index++;
+		}
+		copy_index--; //go back to last bit changed
+		//if first bit is 1, carry bit = 1;
+		if(bits[copy_index] != 0){
+			for(int n = 0; n < length; n++){
+				if(bits[copy_index] == 0){
+					break;
+				}
+				bits[copy_index] = !(bits[copy_index]);
+				copy_index--;
+			}
+			bits[copy_index] = 1;
+		}else{
+			bits[copy_index] = !(bits[copy_index]);
+		}
+	}else{
+		return;
+	}
+}
+
+void and(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]) {
+	printf("This is an and \n");
+	//check if 3 operands,
+	//check if each operand is in correct format. first check if first element is r and/or #
+	//after, check if second element (For r) is 0-7 or if #-- matches amount of immediate bits
+	//for and, this must be imm5
+	if((*lArg1 == NULL) || (*lArg2 == NULL) || (*lArg3 == NULL) || (*lArg4 != NULL)){
+		exit(4); //ERROR: incorrect amount of operands
+	}
+	if((*lArg1 != 'r') || (*lArg2 != 'r') || ((*lArg3 != 'r') && (*lArg3 != '#'))){
+		exit(4);
+	}
+	if((strlen(lArg1) != 2) && (strlen(lArg2) != 2)){
+		exit(4); //ERROR: invalid operand format
+	}
+	if((*(lArg1+1) < '0' ) || (*(lArg1+1) > '7') || (*(lArg1+1) < '0') || (*(lArg2+1) > '7')){
+		exit(4); //ERROR: invalid operand format
+	}
+	//at this point, we know lArg1 and lArg2 are correct
+	if(*(lArg3) == 'r'){
+		//register
+		if((strlen(lArg3) != 2) || (*(lArg3+1) < '0') || (*(lArg3+1) > '7')){
+			exit(4); //ERROR: invalid operand format
+		}
+	}else{
+		//imm5
+		int check_num = toNum(lArg3);
+		if((check_num < -16) || (check_num > 15)){
+			exit(3); //invalid constant
+		}
+	}
+	//now we know the instruction is in the correct format
+	//convert to bit representation
+	/**/
+	//int bitrep[16] = {0,1,0,1, 0,0,0, 0,0,0, 0,0,0, 0,0,0};
+	bitrep[1] = 1; bitrep[3] = 1;
+
+	/**/
+	int b_index = 4; //index starts at bit[11]
+	//NOTE: maybe put vv in a separate function since it is used anytime a register appears?
+	int num_rep = ((*(lArg1+1) - '0'));
+	convertRegister(bitrep, num_rep, b_index);
+
+	num_rep = (*(lArg2+1) - '0'); //next register
+	b_index = 7;
+	convertRegister(bitrep, num_rep, b_index);
+
+	if(*lArg3 == 'r'){
+		b_index = 13; //keep bit[5:3] = 0
+		num_rep = (*(lArg3+1) - '0');
+		convertRegister(bitrep, num_rep, b_index);
+	}else{
+		bitrep[10] = 1;
+		b_index = 11;
+		num_rep = toNum(lArg3);
+		convertOffset(bitrep, num_rep, b_index, 5);
+	}
+
+	return;
+	//^^ CHANGE AFTER FIXING createOutputObjFile()
+	//because we need to pass in the int arr[16] so it does not go out of scope
+
+}
+
+int jsr(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
+	/* has to have label. no registers.
+	 * make sure it is in range
+	 *
+	 */
+}
+
+int lea(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
+	// ^ same
+}
+
+int nop(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
+	// nothing...? just nop?
+}
+
+void not(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
+	//similar to and but no imm5. only 2 operands. must start with 'r', 0-7
+	if((*lArg1 == NULL) || (*lArg2 == NULL) || (*lArg3 != NULL) || (*lArg4 != NULL)){
+		exit(4); //ERROR: invalid amount of operands
+	}
+	if((*lArg1 != 'r') || (*lArg2 != 'r')){
+		exit(4); //ERROR: invalid operand format
+	}
+	if((strlen(lArg1) != 2) || (strlen(lArg2) != 2)){
+		exit(4); //ERROR: invalid operand format
+	}
+	if((*(lArg1 +1) < '0') || (*(lArg1+1) > '7') || (*(lArg2+1) < '0') || (*(lArg2+1) > '7')){
+		exit(4); //ERROR: invalid operand format
+	}
+	bitrep[0] = 0; bitrep[3] = 1; //1001
+	bitrep[10] = 1; bitrep[11] = 1; bitrep[12] = 1; bitrep[13] = 1; bitrep[14] = 1; bitrep[15] = 1;	//bit[5:0] = 1
+	int num_rep = (*(lArg1+1) - '0');
+	convertRegister(bitrep, num_rep, 4);
+	num_rep = (*(lArg2+1) - '0');
+	convertRegister(bitrep, num_rep, 7);
+
+}
+
+void ret(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
+	//must be 'RET' otherwise error...
+	if((*lArg1 != NULL) || (*lArg2 != NULL) || (*lArg3 != NULL) || (*lArg4 != NULL){
+		exit(4); //ERROR: invalid amount of operands. it shouldn't have any
+	}
+	bitrep[0] = 1; bitrep[1] = 1; // 0xA000
+	bitrep[7] = 1; //0x0100
+	bitrep[8] = 1; bitrep[9] = 1; // 0x00A0
+}
+
+void lshf(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
+	if((*lArg1 == NULL) || (*lArg2 == NULL) || (*lArg3 == NULL) || (*lArg4 !=NULL)){
+		exit(4); //ERROR: invalid amount of operands
+	}
+	if((*lArg1 != 'r') || (*lArg2 != 'r') || (*lArg3 != '#')){
+		exit(4); //ERROR: invalid operand format
+	}
+	if((strlen(lArg1) != 2) || (strlen(lArg2) != 2)){
+		exit(4); //ERROR: invalid operand format
+	}
+	//check r0-r7
+	//check #
+}
+
+int rshfl(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
+
+}
+
+int rshfa(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
+
+}
+
+int rti(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
+
+}
+
+int stb(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
+	// must have label or #_?
+}
+
+int stw(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
+	//same
+}
+
+void trap(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
+	//should only be TRAP x25
+	//no other way
+	if((*(lArg1) == NULL) || (*lArg2 != NULL) || (*lArg3 != NULL) || (*lArg4 != NULL)){
+		exit(4); //ERROR: invalid amount of operands
+	}
+	if(strcmp(lArg1, "x25") != 0){
+		exit(4); //ERROR: invalid operand (?)
+	}
+	//correct format
+	bitrep[0] = 1; bitrep[1] = 1; bitrep[2] = 1; bitrep[3] = 1; //0xF000
+	bitrep[10] = 1;  //0x0020
+	bitrep[13] = 1; bitrep[15] = 1;  //0x0005
+}
+
+int xor(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
+	//similar to not
+}
+
+
+
+/*
 
 void createOutputObjFile(char * input, char * output) {
 	char lLine[MAX_LINE_LENGTH + 1], *lLabel, *lOpcode, *lArg1,
@@ -309,12 +530,10 @@ void createOutputObjFile(char * input, char * output) {
 
 	FILE * lInFile = fopen(input, "r");
 
-	do
-	{
-		lRet = readAndParse( lInFile, lLine, &lLabel,
-			&lOpcode, &lArg1, &lArg2, &lArg3, &lArg4 );
-		if( lRet != DONE && lRet != EMPTY_LINE )
-		{
+	do {
+		lRet = readAndParse(lInFile, lLine, &lLabel,
+							&lOpcode, &lArg1, &lArg2, &lArg3, &lArg4);
+		if (lRet != DONE && lRet != EMPTY_LINE) {
 			// lRet = 'OK'
 			printf("lLabel is %s\n", lLabel);
 			printf("lOpcode is %s\n", lOpcode);
@@ -328,10 +547,13 @@ void createOutputObjFile(char * input, char * output) {
 			}
 
 			int translatedDec;
-			if (strcmp(lOpcode, "add") == 0)
+/*
+			if (strcmp(lOpcode, "add") == 0) {
 				translatedDec = add(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
-			else if (strcmp(lOpcode, "and") == 0)
-				translatedDec = and(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			} else(strcmp(lOpcode, "and") == 0){
+				//translatedDec = and(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
+			}
+*/
 			/*else if (strcmp(lOpcode, "brn") == 0) brn(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
 			else if (strcmp(lOpcode, "brp") == 0) brp(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
 			else if (strcmp(lOpcode, "brnp") == 0) brnp(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
@@ -361,13 +583,15 @@ void createOutputObjFile(char * input, char * output) {
 			// TO DO: Change to error!
 			else printf("Not a valid opcode!");
 
-*/			char* hexadecimal = convertDecToHex(translatedDec);
-			printf("Hexadecimal for the line is: %s", hexadecimal);
+*/            //char* hexadecimal = convertDecToHex(translatedDec);
+			//printf("Hexadecimal for the line is: %s", hexadecimal);
+			//}
+/*
 		}
-	} while( lRet != DONE );
-
+		while (lRet != DONE);
+	}
 }
-
+*/
 
 void createSymbolTable(FILE* inputFile) {
 	// First pass: Create symbol table
@@ -396,22 +620,18 @@ void createSymbolTable(FILE* inputFile) {
 				if(strcmp(lOpcode, ".orig") == 0){
 					//check if valid
 					int check_address = toNum(lArg1);
+					if((check_address % 2) != 0){
+						exit(3); //ERROR: odd constant
+					}
 					if(check_address >= 0 && check_address <= 65535){
 						cu_address = check_address;
-
-						//test
-						char ad[5] = {'x', '0', '0', '0', '0'};
-						int add[16] = {0,0,0,1,0,0,0,1,0,1,0,1,1,0,1,0};
-						convertHextoCA(cu_address, ad);
-						convertBReptoHex(add, ad);
-						//test done
-						
 					}else{
 						exit(3); //ERROR: invalid constant
 					}
 				}
-				if(*(lLabel) != NULL){
+				if(*lLabel != NULL){
 					//check if valid
+
 					int i_sym = 0;
 					while(*(lLabel+i_sym) != NULL){
 						if(isalnum(*(lLabel+i_sym)) == false){
@@ -460,7 +680,7 @@ void main(int argc, char *argv[]) {
 	createSymbolTable(inputFile);
 
 	// second pass: assembly language to machine language
-	createOutputObjFile(input, output);
+	//createOutputObjFile(input, output);
 
 	fclose(inputFile);
 	fclose(outputFile);
