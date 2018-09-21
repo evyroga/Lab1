@@ -225,6 +225,18 @@ int isOpcode(char* opcode) {
 	return (-1);
 }
 
+//Returns -1 if NOT a pseudo op
+int isPseudo(char* olabel){
+	char* pseudo[4] = {"getc", "in", "out", "puts"};
+	for(int i = 0; i < 4; i++){
+		if(strcmp(pseudo[i], olabel) == 0){
+			return i;
+		}
+		return (-1);
+	}
+}
+
+
 // Takes a line of the input file and parses it into corresponding fields
 int readAndParse( FILE * pInfile, char * pLine, char ** pLabel, char ** pOpcode,
 		char ** pArg1, char ** pArg2, char ** pArg3, char ** pArg4) {
@@ -764,8 +776,8 @@ void createOutputObjFile(char * input, char * output) {
 
 			if (strcmp(lOpcode, "add") == 0) {
 				//add(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
-			} else if(strcmp(lOpcode, "and") == 0){
-				int bitrep[16] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0};
+			} else if (strcmp(lOpcode, "and") == 0) {
+				int bitrep[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 				and(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
 			}
 
@@ -803,8 +815,8 @@ void createOutputObjFile(char * input, char * output) {
 			//}
 
 		}
-	}
-		while (lRet != DONE);
+		Current = Current + 0x0002;
+	}while (lRet != DONE);
 
 }
 
@@ -846,18 +858,31 @@ void createSymbolTable(FILE* inputFile) {
 						exit(3); //ERROR: invalid constant
 					}
 				}
+				if(strcmp(lOpcode, ".end") == 0){
+					return; //done
+				}
+
+				//check args
+				if((isOpcode(lArg1) != -1) || (isOpcode(lArg2) != -1) || (isOpcode(lArg3) != -1) || (isOpcode(lArg4) != -1)){
+					exit(1);
+				}
+
 				if(*lLabel != NULL){
 					//check if valid
-
-					int arr[16] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0};
-					and(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, arr);
-
+					//check if valid. if not,
+					//is it an instruction
+					if(isOpcode(lLabel) != -1){
+						exit(1); //ERROR: label is an instruction
+					}
+					if(isPseudo(lLabel) != -1){
+						exit(1); //ERROR: label is a pseudo-op
+					}
 
 
 					int i_sym = 0;
 					while(*(lLabel+i_sym) != NULL){
 						if(isalnum(*(lLabel+i_sym)) == false){
-							goto next_address;
+							exit(4); //ERROR: invalid label format
 						}
 						i_sym ++;
 					}
@@ -870,13 +895,13 @@ void createSymbolTable(FILE* inputFile) {
 						//copy into symbol table
 						symboltable[Tablesize].label[input] = *(lLabel + input);
 					}
-					symboltable[Tablesize].label[i_sym] = NULL; //null terminate char array
 					symboltable[Tablesize].location = cu_address;
 					Tablesize++;
 				}
+				next_address:
+				cu_address = cu_address + 0x0002; //increment current address
 			}
-			next_address:
-			cu_address = cu_address + 2; //increment current address
+
 		} while( lRet != DONE );
 
 }
