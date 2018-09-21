@@ -33,8 +33,6 @@ TableEntry symboltable[MAX_SYMBOLS];
 int Tablesize = 0; //number of symbols on table
 
 
-
-
 /*** convert string to int ***/
 int toNum( char * pStr ){
 	char * t_ptr;
@@ -99,7 +97,117 @@ int toNum( char * pStr ){
 	}
 }
 
+/*** ***/
+//find a^b
+int intPower(int a, int b){
+	int c = 1;
+	for(int i=0; i != b; i++){
+		c = c*a;
+	}
+	return c;
+}
 
+//convert from char array to int (hex)
+int convertCAtoHex(char* num){
+	int hex = 0x0000;
+	int bit = 0x0001;
+	int decimal = toNum(num);
+	int n;
+	if(decimal == 0){
+		return 0x0000;
+	}
+	while(decimal >0) {
+		for (n = 15; n >= 0; n--) {
+			int power = intPower(2, n);
+			if ((decimal - power) >= 0) {
+				break;
+			}
+		}
+		decimal = decimal - intPower(2, n);
+		hex = hex + (0x0001 << n);
+	}
+
+	return hex;
+}
+
+//converts 4 bits to a hex value (1010 = 'A')
+char BintoHex(int binary[16], int index){
+	int b_total = 0;
+	switch(index) {
+		//bit[15:12]
+		case 1:
+			for(int b=0; b<4; b++){
+				if(binary[b] != 0){
+					b_total = b_total + intPower(2, (3-b));
+				}
+			}
+			break;
+		//bit[11:8]
+		case 2:
+			for(int b=4; b<8; b++){
+				if(binary[b] != 0){
+					b_total = b_total + intPower(2, (4-(b-3)));
+				}
+			}
+			break;
+		//bit[7:4]
+		case 3:
+			for(int b=8; b<12; b++){
+				if(binary[b] != 0){
+					b_total = b_total + intPower(2, (8-(b-3)));
+				}
+			}
+			break;
+		//bit[3:0]
+		case 4:
+			for(int b=12; b<16; b++){
+				if(binary[b] != 0){
+					b_total = b_total + intPower(2, (12-(b-3)));
+				}
+			}
+			break;
+	}
+	if(b_total < 10){
+		return ('0' + b_total);
+	}else{
+		b_total = 15 - b_total;
+		return ('F' - b_total);
+	}
+}
+
+//hexval can be in hex or decimal form
+//example: 0x3000 = 12288
+char* convertHextoCA(int hexval, char hex_arr[5]){
+	int binary_arr[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	//char hex_arr[5] = {'x', '0', '0', '0', '0'};
+
+	//convert to binary
+	for(int n = 15; n != 0; n--){
+		if((hexval - intPower(2, n)) >= 0){
+			binary_arr[15-n] = 1;
+			hexval = hexval - intPower(2,n);
+		}
+	}
+	//convert each 4 bits to a hex value
+	hex_arr[0] = 'x';
+	for(int hex_in = 1; hex_in < 5; hex_in++){
+		hex_arr[hex_in] = BintoHex(binary_arr, hex_in);
+	}
+	return hex_arr;
+}
+
+//binary to hex representation (0001000111111111 = x11FF)
+char* convertBReptoHex(int* bitrep, char hex_arr[5]){
+	//char hex_arr[5] = {'x', '0', '0', '0', '0'};
+
+	for(int hex_in = 1; hex_in < 5; hex_in++){
+		hex_arr[hex_in] = BintoHex(bitrep, hex_in);
+	}
+	return hex_arr;
+}
+
+
+/*** **/
 
 // Returns either an OPCODE or a potential LABEL
 int isOpcode(char* opcode) {
@@ -285,11 +393,19 @@ void createSymbolTable(FILE* inputFile) {
 				printf("lArg4 is %s\n\n", lArg4);
 
 
-				if(strcmp(lOpcode, ".ORIG") == 0){
+				if(strcmp(lOpcode, ".orig") == 0){
 					//check if valid
 					int check_address = toNum(lArg1);
-					if(check_address >= 0 && check_address <= 32768){
+					if(check_address >= 0 && check_address <= 65535){
 						cu_address = check_address;
+
+						//test
+						char ad[5] = {'x', '0', '0', '0', '0'};
+						int add[16] = {0,0,0,1,0,0,0,1,0,1,0,1,1,0,1,0};
+						convertHextoCA(cu_address, ad);
+						convertBReptoHex(add, ad);
+						//test done
+						
 					}else{
 						exit(3); //ERROR: invalid constant
 					}
@@ -328,7 +444,7 @@ void main(int argc, char *argv[]) {
 	char *input = argv[1];
 	char *output = argv[2];
 	// read in file
-	FILE *inputFile = fopen(input, "r");
+	FILE *inputFile = fopen("source.asm", "r");
 	// create output file
 	FILE *outputFile = fopen(output, "w");
 
