@@ -98,6 +98,7 @@ int toNum( char * pStr ){
 }
 
 /*** ***/
+
 //find a^b
 int intPower(int a, int b){
 	int c = 1;
@@ -106,6 +107,17 @@ int intPower(int a, int b){
 	}
 	return c;
 }
+
+int convertBReptoInt(int bitrep[16]){
+    int result = 0;
+    for(int br_index = 0; br_index < 16; br_index++){
+        if(bitrep[br_index] == 1){
+            result = result + intPower(2, (15 - br_index));
+        }
+    }
+    return result;
+}
+
 
 //convert from char array to int (hex)
 int convertCAtoHex(char* num){
@@ -1008,6 +1020,8 @@ void createOutputObjFile(char* input, char* output) {
 			printf("lArg3 is %s\n", lArg3);
 			printf("lArg4 is %s\n\n", lArg4);
 
+            Current = Current + 0x0002;
+
             if (strcmp(lOpcode, "add") == 0) {
                 add(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
             }else if(strcmp(lOpcode, "and") == 0){
@@ -1040,6 +1054,9 @@ void createOutputObjFile(char* input, char* output) {
                 ldw(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
             }else if(strcmp(lOpcode, "lea") == 0) {
                 lea(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
+                int printhex = convertBReptoInt(bitrep);
+                printf("0x%.4X\n", printhex);
+                return;
             }else if(strcmp(lOpcode, "nop") == 0) {
                 nop(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
             }else if(strcmp(lOpcode, "not") == 0) {
@@ -1068,16 +1085,21 @@ void createOutputObjFile(char* input, char* output) {
                 printf("%X", Current);
             }else if(strcmp(lOpcode, ".fill") == 0){
                 // take first argument
+                if((*lArg1 == NULL) || (*lArg2 != NULL) || (*lArg3 != NULL) || (*lArg4 != NULL)){ exit(4); }
+                if((strlen(lArg1) != 5) || (*lArg1 != 'x')){ exit(4); }
+                for(int check = 1; check < 5; check++){
+                    if((*(lArg1+check) < '0') || (*(lArg1+check) > '9')
+                       || (*(lArg1+check) < 'a') || (*(lArg1+check) > 'f')){ exit(4); }
+                }
+                int fill_num = toNum(lArg1);
+                printf("0x%.4X\n", fill_num); //CHECK TO fprintf
             }else if(strcmp(lOpcode, ".end") == 0){
                 //done with reading
             }else{
                 printf("Not a valid opcode!");
                 exit(2);
             }
-            convertBReptoHex(bitrep, hexrep);
-            //convert to hex here? and then write to thing
-            //increment current address
-            Current = Current + 0x0002;
+
 		}
 	}while (lRet != DONE);
 }
@@ -1150,12 +1172,7 @@ void createSymbolTable(FILE* inputFile) {
 						//copy into symbol table
 						symboltable[Tablesize].label[input] = *(lLabel + input);
 					}
-					if(strcmp(lOpcode, ".fill") == 0){
-					    int fill_address = toNum(lArg1);
-					    symboltable[Tablesize].location = fill_address;
-					}else {
-                        symboltable[Tablesize].location = cu_address;
-                    }
+					symboltable[Tablesize].location = cu_address;
 					Tablesize++;
 				}
 				next_address:
@@ -1187,9 +1204,9 @@ void main(int argc, char *argv[]) {
 
 	// second pass: assembly language to machine language
 	createOutputObjFile(input, output);
-/*
+
 	fclose(inputFile);
 	fclose(outputFile);
 	exit(0);
- */
+
 }
