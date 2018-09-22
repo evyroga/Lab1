@@ -620,9 +620,10 @@ void jsr(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 	if((loca < (Current - 1024)) || (loca > (Current + 1023))){
 		exit(4); //ERROR: out of range
 	}
+	int pcOff = (loca - Current)/2;
 	bitrep[1] = 1;
 	bitrep[4] = 1;
-	convertOffset(bitrep, loca, 5, 11);
+	convertOffset(bitrep, pcOff, 5, 11);
 }
 
 void jsrr(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
@@ -727,7 +728,8 @@ void lea(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 	if((loca < (Current - 256)) || (loca > (Current + 255))){
 		exit(4); //ERROR: out of range
 	}
-	int pcOff = loca - Current ; //current location - label location
+	int pcOff = loca - Current ; //label location - current location
+	pcOff = pcOff/2;
 	bitrep[0] = 1; bitrep[1] = 1; bitrep[2] = 1;
 
 	int regnum = (*(lArg1+1) - '0');
@@ -996,8 +998,22 @@ void xor(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 	}
 }
 
+void fill(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4,int bitrep[16]){
+    // take first argument
+    if((*lArg1 == NULL) || (*lArg2 != NULL) || (*lArg3 != NULL) || (*lArg4 != NULL)){ exit(4); }
+    if((strlen(lArg1) != 5) || (*lArg1 != 'x')){
+        exit(4);
+    }
+    for(int check = 1; check < 5; check++){
+        if((*(lArg1+check) < '0') || (*(lArg1+check) > '9')
+           || (*(lArg1+check) < 'a') || (*(lArg1+check) > 'f')){
+            exit(4);
+        }
+    }
+}
 
-void createOutputObjFile(char* input, char* output) {
+
+void createOutputObjFile(char* input, FILE* output) {
 	char lLine[MAX_LINE_LENGTH + 1], *lLabel, *lOpcode, *lArg1,
 		        *lArg2, *lArg3, *lArg4;
 
@@ -1019,6 +1035,11 @@ void createOutputObjFile(char* input, char* output) {
 			printf("lArg2 is %s\n", lArg2);
 			printf("lArg3 is %s\n", lArg3);
 			printf("lArg4 is %s\n\n", lArg4);
+
+            if(strcmp(lOpcode, ".orig") == 0){
+                fprintf(output, "0x%.4X\n", Current);
+                goto FoundOrig;
+            }
 
             Current = Current + 0x0002;
 
@@ -1081,25 +1102,18 @@ void createOutputObjFile(char* input, char* output) {
                 and(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
             }else if(strcmp(lOpcode, "jsr") == 0) {
                 jsr(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
-            }else if(strcmp(lOpcode, ".orig") == 0){
-                printf("%X", Current);
             }else if(strcmp(lOpcode, ".fill") == 0){
-                // take first argument
-                if((*lArg1 == NULL) || (*lArg2 != NULL) || (*lArg3 != NULL) || (*lArg4 != NULL)){ exit(4); }
-                if((strlen(lArg1) != 5) || (*lArg1 != 'x')){ exit(4); }
-                for(int check = 1; check < 5; check++){
-                    if((*(lArg1+check) < '0') || (*(lArg1+check) > '9')
-                       || (*(lArg1+check) < 'a') || (*(lArg1+check) > 'f')){ exit(4); }
-                }
                 int fill_num = toNum(lArg1);
                 printf("0x%.4X\n", fill_num); //CHECK TO fprintf
             }else if(strcmp(lOpcode, ".end") == 0){
-                //done with reading
+                return;
             }else{
                 printf("Not a valid opcode!");
                 exit(2);
             }
-
+		    FoundOrig:
+		    //print here
+		    return;
 		}
 	}while (lRet != DONE);
 }
@@ -1203,7 +1217,7 @@ void main(int argc, char *argv[]) {
 
 
 	// second pass: assembly language to machine language
-	createOutputObjFile(input, output);
+	createOutputObjFile(input, outputFile);
 
 	fclose(inputFile);
 	fclose(outputFile);
