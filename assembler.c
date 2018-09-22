@@ -31,7 +31,8 @@ typedef struct TableEntry{
 } TableEntry;
 TableEntry symboltable[MAX_SYMBOLS];
 int Tablesize = 0; //number of symbols on table
-int Current = 0; //set when .orig is read
+int Current = 0;
+
 
 /*** convert string to int ***/
 int toNum( char * pStr ){
@@ -225,18 +226,6 @@ int isOpcode(char* opcode) {
 	return (-1);
 }
 
-//Returns -1 if NOT a pseudo op
-int isPseudo(char* olabel){
-	char* pseudo[4] = {"getc", "in", "out", "puts"};
-	for(int i = 0; i < 4; i++){
-		if(strcmp(pseudo[i], olabel) == 0){
-			return i;
-		}
-		return (-1);
-	}
-}
-
-
 // Takes a line of the input file and parses it into corresponding fields
 int readAndParse( FILE * pInfile, char * pLine, char ** pLabel, char ** pOpcode,
 		char ** pArg1, char ** pArg2, char ** pArg3, char ** pArg4) {
@@ -298,15 +287,44 @@ void checkNumOperands(int expectedNum, char * lArg1, char * lArg2, char* lArg3, 
 	if (expectedNum == 0 && )
 }*/
 
+bool checkValidRegister(char * lArg) {
+	if (strcmp(lArg[0], "r") == 0 && lArg[1] >= 0 && lArg[1] <= 7) {
+		return true;
+	}
+	return false;
+}
+
+
+
+// Check if the instruction has the correct number of operands
+bool checkNumOperands(int expectedNum, char * lArg1, char * lArg2, char* lArg3, char * lArg4) {
+	int operandsCount = 0;
+	if (!*lArg1 == NULL) {
+		operandsCount ++;
+	}
+	if (!*lArg2 == NULL) {
+		operandsCount ++;
+	}
+	if (!*lArg3 == NULL) {
+		operandsCount ++;
+	}
+	if (!*lArg4 == NULL) {
+		operandsCount ++;
+	}
+
+	if(expectedNum == operandsCount) {
+		return true;
+	}
+	return false;
+}
+
+
 char * convertDecToHex() {
 	char * hexValue = "xDEAD";
 	return hexValue;
 }
 
-int add(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4) {
-	printf("This is an add");
 
-}
 
 //converts r0, r1, r2, etc to binary and sets corresponding bits in bit representation array
 //pass in bit rep. array, register value in decimal form, and starting index,
@@ -365,6 +383,61 @@ void convertOffset(int bits[16], int ionum, int b_index, int length){
 	}
 }
 
+
+int labelInSymbolTable(char * lLabel) {
+	for (int i = 0; i < Tablesize; i++) {
+		// found matching label
+		if(strcmp(symboltable[i].label, lLabel) == 0) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+void add(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitRep[16]) {
+	// Check if the number of operands is correct
+	int expectedNumOperands = 3;
+
+	// add opcode 0001
+	bitRep[3] = 1;
+
+	if(!checkNumOperands(expectedNumOperands, lArg1, lArg2, lArg3, lArg4)) {
+		exit(4);
+	}
+	// Check if 1st and 2nd registers are valid
+	if (*lArg1 == 'r' && *(lArg1+1) >= '0' && *(lArg1+1) <= '7'
+			&& *lArg2 == 'r' && *(lArg2+1) >= '0' && *(lArg2+1) <= '7') {
+		int num_rep1 = ((*(lArg1+1) - '0'));
+		int num_rep2 = ((*(lArg2+1) - '0'));
+		convertRegister(bitRep, num_rep1, 4);
+		convertRegister(bitRep, num_rep2, 7);
+
+	}
+	else {
+		exit (4);
+	}
+
+	// Check if 3rd register is a valid register
+	if (*lArg3 == 'r' && *(lArg3+1) >= '0' && *(lArg3+1) <= '7') {
+		int num_rep3 = ((*(lArg3+1) - '0'));
+		convertRegister(bitRep, num_rep3, 13 );
+	}
+	// Check if 3rd register is a valid immediate
+	else if(*lArg3 == '#') {
+		int dec = toNum(lArg3);
+		if(dec >= -16 && dec <= 15) {
+			bitRep[10] = 1;
+			convertOffset(bitRep, dec, 11, 5);
+		}
+		else exit (3); // invalid constant
+	}
+	else {
+		exit(4); // invalid operand
+	}
+}
+
+
+
 void and(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]) {
 	printf("This is an and \n");
 	//check if 3 operands,
@@ -377,7 +450,7 @@ void and(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 	if((*lArg1 != 'r') || (*lArg2 != 'r') || ((*lArg3 != 'r') && (*lArg3 != '#'))){
 		exit(4);
 	}
-	if((strlen(lArg1) != 2) || (strlen(lArg2) != 2)){
+	if((strlen(lArg1) != 2) && (strlen(lArg2) != 2)){
 		exit(4); //ERROR: invalid operand format
 	}
 	if((*(lArg1+1) < '0' ) || (*(lArg1+1) > '7') || (*(lArg1+1) < '0') || (*(lArg2+1) > '7')){
@@ -429,67 +502,180 @@ void and(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 
 }
 
-void jsr(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
-	if((*lArg1 == NULL) || (*lArg2 != NULL) || (*lArg3 != NULL) ||(*lArg4 != NULL)){
-		exit(4); //ERROR: invalid amount of operands
+
+/* 	brn 	0
+	brz		1
+	brp		2
+	br		3
+	brzp	4
+	brnp	5
+	brnz	6
+	brnzp 	7	*/
+void br_(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4,
+		int bitrep[16], int currLocation, int version) {
+
+	switch(version) {
+		case 0:
+			bitrep[4] = 1;
+			break;
+		case 1:
+			bitrep[5] = 1;
+			break;
+		case 2:
+			bitrep[6] = 1;
+			break;
+		case 3:
+		case 4:
+			bitrep[5] = 1;
+			bitrep[6] = 1;
+			break;
+		case 5:
+			bitrep[4] = 1;
+			bitrep[6] = 1;
+			break;
+		case 6:
+			bitrep[4] = 1;
+			bitrep[5] = 1;
+			break;
+		case 7:
+			bitrep[4] = 1;
+			bitrep[5] = 1;
+			bitrep[6] = 1;
+			break;
 	}
-	int loca = 0;
-	for(int sym = 0; sym <Tablesize; sym++){
-		if(strcmp(lArg1, symboltable[sym].label)){
-			loca = symboltable[sym].location; //get location (decimal)
-			goto FoundJSR;
+
+	// check number of operands
+	if(!checkNumOperands(1, lArg1, lArg2, lArg3, lArg4)) {
+			exit(4);
+	}
+
+	int labelIndex = labelInSymbolTable(lArg1);
+	// label not in symbol table
+	if( labelIndex == -1){
+		exit(1); // Undefined labels
+	}
+	// label exists
+	if (labelIndex != -1){
+		int labelLocation = symboltable[labelIndex].location;
+		int decOffset = labelLocation - Current;
+		// check if PCoffset9 within range
+		if (decOffset >= -256 && decOffset <= 255) {
+			convertOffset(bitrep, decOffset, 7, 9);
+		}
+		else {
+			exit(3); // invalid constant
 		}
 	}
-	exit(1); //ERROR: label does not exist!
-	FoundJSR: //location was found
+}
 
-	if((loca < (Current - 1024)) || (loca > (Current + 1023))){
-		exit(4); //ERROR: out of range
+
+
+void halt(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
+	//should only be TRAP x25
+	//no other way
+	if(!checkNumOperands(0, lArg1, lArg2, lArg3, lArg4)){
+		exit(4); //ERROR: invalid amount of operands
 	}
+
+	//correct format
+	bitrep[0] = 1; bitrep[1] = 1; bitrep[2] = 1; bitrep[3] = 1; //0xF000
+	bitrep[10] = 1;  //0x0020
+	bitrep[13] = 1; bitrep[15] = 1;  //0x0005
+}
+
+
+void jmp(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
+	if(!checkNumOperands(1, lArg1, lArg2, lArg3, lArg4)){
+		exit(4);
+	}
+	bitrep[0] = 1;
 	bitrep[1] = 1;
-	bitrep[4] = 1;
-	convertOffset(bitrep, loca, 5, 11);
+	// check if arg1 is valid register
+	// Check if 3rd register is a valid register
+	if (*lArg1 == 'r' && *(lArg1+1) >= '0' && *(lArg1+1) <= '7') {
+		int num_rep = ((*(lArg1+1) - '0'));
+		convertRegister(bitrep, num_rep, 7 );
+	}
 
 }
 
-void lea(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
-	// ^ same
-	if((*lArg1 == NULL) || (*lArg2 == NULL) || (*lArg3 != NULL) ||(*lArg4 != NULL)){
-		exit(4); //ERROR: invalid amount of operands
+void jsr(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
+	/* has to have label. no registers.
+	 * make sure it is in range
+	 *
+	 */
+
+	bitrep[1] = 1;
+	// Check if number of operands is correct
+	if(!checkNumOperands(1, lArg1, lArg2, lArg3, lArg4)){
+			exit(4);
 	}
 
-	if((*lArg1 != 'r') || (strlen(lArg1) != 2)){
-		exit(4); // ERROR: invalid operand format
+	// check valid register
+	if (*lArg1 == 'r' && *(lArg1+1) >= '0' && *(lArg1+1) <= '7') {
+		int num_rep = ((*(lArg1+1) - '0'));
+		convertRegister(bitrep, num_rep, 7 );
 	}
-	if((*(lArg1+1) < '0') || (*(lArg1+1) > '7')){
-		exit(4); //ERROR: invalid operand format
-	}
-	//check if label exists
-	int loca = 0;
-	for(int sym = 0; sym <Tablesize; sym++){
-		if(strcmp(lArg2, symboltable[sym].label)){
-			loca = symboltable[sym].location; //get location (decimal)
-			goto Found;
-		}
-	}
-	exit(1); //ERROR: Label does not exist!
-	Found: //label found
-	if((loca < (Current - 256)) || (loca > (Current + 255))){
-		exit(4); //ERROR: out of range
-	}
-	int pcOff = Current - loca; //current location - label location
-	bitrep[0] = 1; bitrep[1] = 1; bitrep[2] = 1;
-
-	int regnum = (*(lArg1+1) - '0');
-	convertRegister(bitrep, regnum, 4);
-
-	convertOffset(bitrep, pcOff, 7,9);
-
 }
 
-void nop(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
-	// nothing
+void ldb(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
+	bitrep[2] = 1;
+	// Check if number of operands is correct
+	if(!checkNumOperands(3, lArg1, lArg2, lArg3, lArg4)){
+			exit(4);
+	}
+
+	// check valid DR
+	if (*lArg1 == 'r' && *(lArg1+1) >= '0' && *(lArg1+1) <= '7') {
+		int num_rep = ((*(lArg1+1) - '0'));
+		convertRegister(bitrep, num_rep, 4 );
+	}
+	// check valid BaseR
+	if (*lArg2 == 'r' && *(lArg2+1) >= '0' && *(lArg2+1) <= '7') {
+		int num_rep = ((*(lArg2+1) - '0'));
+		convertRegister(bitrep, num_rep, 7 );
+	}
+	// check valid boffset6
+	int decOffset = toNum(lArg3);
+
+	if (decOffset >= -32 && decOffset <= 31) {
+		convertOffset(bitrep, decOffset, 10, 6);
+	}
+	else {
+		exit(3); // invalid constant
+	}
 }
+
+void ldw(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
+	bitrep[1] = 1;
+	bitrep[2] = 1;
+	// Check if number of operands is correct
+	if(!checkNumOperands(3, lArg1, lArg2, lArg3, lArg4)){
+			exit(4);
+	}
+
+	// check valid DR
+	if (*lArg1 == 'r' && *(lArg1+1) >= '0' && *(lArg1+1) <= '7') {
+		int num_rep = ((*(lArg1+1) - '0'));
+		convertRegister(bitrep, num_rep, 4 );
+	}
+	// check valid BaseR
+	if (*lArg2 == 'r' && *(lArg2+1) >= '0' && *(lArg2+1) <= '7') {
+		int num_rep = ((*(lArg2+1) - '0'));
+		convertRegister(bitrep, num_rep, 7 );
+	}
+	// check valid boffset6
+	int decOffset = toNum(lArg3);
+
+	if (decOffset >= -32 && decOffset <= 31) {
+		convertOffset(bitrep, decOffset, 10, 6);
+	}
+	else {
+		exit(3); // invalid constant
+	}
+}
+
+
 
 void not(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
 	//similar to and but no imm5. only 2 operands. must start with 'r', 0-7
@@ -514,15 +700,15 @@ void not(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 
 }
 
-void ret(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
+/*void ret(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
 	//must be 'RET' otherwise error...
-	if((*lArg1 != NULL) || (*lArg2 != NULL) || (*lArg3 != NULL) || (*lArg4 != NULL)){
+	if((*lArg1 != NULL) || (*lArg2 != NULL) || (*lArg3 != NULL) || (*lArg4 != NULL){
 		exit(4); //ERROR: invalid amount of operands. it shouldn't have any
 	}
 	bitrep[0] = 1; bitrep[1] = 1; // 0xA000
 	bitrep[7] = 1; //0x0100
 	bitrep[8] = 1; bitrep[9] = 1; // 0x00A0
-}
+}*/
 
 void lshf(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
 	if((*lArg1 == NULL) || (*lArg2 == NULL) || (*lArg3 == NULL) || (*lArg4 !=NULL)){
@@ -536,155 +722,26 @@ void lshf(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg
 	}
 	//check r0-r7
 	//check #
+}
 
-	if((*(lArg1+1) < '0') || (*(lArg1+1) > '7') || (*(lArg2+1) < '0') || (*(lArg2+1) > '7')){
-		exit(4); //ERROR: invalid operand format
-	}
-	int amfour = toNum(lArg3); // ** AMOUNT4 DECIMAL HERE
-	if((amfour < 0) || (amfour > 15)){
-		exit(3); //ERROR: invalid constant
-	}
-
-	bitrep[0] = 1; bitrep[1] = 1; bitrep[3] = 1;
-	int regnum = (*(lArg1+1) - '0');
-	convertRegister(bitrep, regnum, 4);  //DR
-	regnum = (*(lArg2) - '0');
-	convertRegister(bitrep, regnum, 7);  //SR
-
-	convertOffset(bitrep, amfour, 12, 4);
+int rshfl(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
 
 }
 
-void rshfl(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
-	if((*lArg1 == NULL) || (*lArg2 == NULL) || (*lArg3 == NULL) || (*lArg4 !=NULL)){
-		exit(4); //ERROR: invalid amount of operands
-	}
-	if((*lArg1 != 'r') || (*lArg2 != 'r') || (*lArg3 != '#')){
-		exit(4); //ERROR: invalid operand format
-	}
-	if((strlen(lArg1) != 2) || (strlen(lArg2) != 2)){
-		exit(4); //ERROR: invalid operand format
-	}
-	//check r0-r7
-	//check #
-
-	if((*(lArg1+1) < '0') || (*(lArg1+1) > '7') || (*(lArg2+1) < '0') || (*(lArg2+1) > '7')){
-		exit(4); //ERROR: invalid operand format
-	}
-	int amfour = toNum(lArg3); // ** AMOUNT4 DECIMAL HERE
-	if((amfour < 0) || (amfour > 15)){
-		exit(3); //ERROR: invalid constant
-	}
-
-	bitrep[0] = 1; bitrep[1] = 1; bitrep[3] = 1;
-	int regnum = (*(lArg1+1) - '0');
-	convertRegister(bitrep, regnum, 4);  //DR
-	regnum = (*(lArg2) - '0');
-	convertRegister(bitrep, regnum, 7);  //SR
-	bitrep[11] = 1;
-
-	convertOffset(bitrep, amfour, 12, 4);
+int rshfa(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
 
 }
 
-void rshfa(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
-	if((*lArg1 == NULL) || (*lArg2 == NULL) || (*lArg3 == NULL) || (*lArg4 !=NULL)){
-		exit(4); //ERROR: invalid amount of operands
-	}
-	if((*lArg1 != 'r') || (*lArg2 != 'r') || (*lArg3 != '#')){
-		exit(4); //ERROR: invalid operand format
-	}
-	if((strlen(lArg1) != 2) || (strlen(lArg2) != 2)){
-		exit(4); //ERROR: invalid operand format
-	}
-	//check r0-r7
-	//check #
+int rti(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
 
-	if((*(lArg1+1) < '0') || (*(lArg1+1) > '7') || (*(lArg2+1) < '0') || (*(lArg2+1) > '7')){
-		exit(4); //ERROR: invalid operand format
-	}
-	int amfour = toNum(lArg3); // ** AMOUNT4 DECIMAL HERE
-	if((amfour < 0) || (amfour > 15)){
-		exit(3); //ERROR: invalid constant
-	}
-
-	bitrep[0] = 1; bitrep[1] = 1; bitrep[3] = 1;
-	int regnum = (*(lArg1+1) - '0');
-	convertRegister(bitrep, regnum, 4);  //DR
-	regnum = (*(lArg2) - '0');
-	convertRegister(bitrep, regnum, 7);  //SR
-	bitrep[10] = 1; bitrep[11] = 1;
-
-	convertOffset(bitrep, amfour, 12, 4);
 }
 
-void rti(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
-	if((*lArg1 != NULL) || (*lArg2 != NULL) || (*lArg3 != NULL) || (*lArg4 != NULL)){
-		exit(4); //ERROR: invalid amount of operands
-	}
-	bitrep[0] = 1;
-}
-
-void stb(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
+int stb(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
 	// must have label or #_?
-	if((*lArg1 == NULL) || (*lArg2 == NULL) || (*lArg3 == NULL) || (*lArg4 != NULL)){
-		exit(4);
-	}
-	if((*lArg1 != 'r') || (*lArg2 != 'r') || (*lArg3 != '#')){
-		exit(4); //ERROR: invalid operand format
-	}
-	if((strlen(lArg1) != 2) || (strlen(lArg2) != 2)){
-		exit(4); //ERROR invalid operand format
-	}
-	if((*(lArg1+1) <'0') || (*(lArg1+1) > '7') || (*(lArg2+1) < '0') || (*(lArg2+1) > '7')){
-		exit(4); //ERROR: invalid operand format
-	}
-	int offset = toNum(lArg3);
-	if((offset < -32) || (offset > 31)){
-		exit(3); //ERROR: invalid constant
-	}
-
-	bitrep[2] = 1; bitrep[3] = 1;
-	int regnum = (*(lArg1+1) - '0');
-	convertRegister(bitrep, regnum, 4);
-	regnum = (*(lArg2+1) - '0');
-	convertRegister(bitrep, regnum, 7);
-
-	//check if in range here
-
-	convertOffset(bitrep, offset, 10, 6);
-
 }
 
-void stw(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
+int stw(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
 	//same
-	// must have label or #_?
-	if((*lArg1 == NULL) || (*lArg2 == NULL) || (*lArg3 == NULL) || (*lArg4 != NULL)){
-		exit(4);
-	}
-	if((*lArg1 != 'r') || (*lArg2 != 'r') || (*lArg3 != '#')){
-		exit(4); //ERROR: invalid operand format
-	}
-	if((strlen(lArg1) != 2) || (strlen(lArg2) != 2)){
-		exit(4); //ERROR invalid operand format
-	}
-	if((*(lArg1+1) <'0') || (*(lArg1+1) > '7') || (*(lArg2+1) < '0') || (*(lArg2+1) > '7')){
-		exit(4); //ERROR: invalid operand format
-	}
-	int offset = toNum(lArg3);
-	if((offset < -32) || (offset > 31)){
-		exit(3); //ERROR: invalid constant
-	}
-
-	bitrep[1] = 1; bitrep[2] = 1; bitrep[3] = 1;
-	int regnum = (*(lArg1+1) - '0');
-	convertRegister(bitrep, regnum, 4);
-	regnum = (*(lArg2+1) - '0');
-	convertRegister(bitrep, regnum, 7);
-
-	//check if in range here
-
-	convertOffset(bitrep, offset, 10, 6);
 }
 
 void trap(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4, int bitrep[16]){
@@ -702,49 +759,11 @@ void trap(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg
 	bitrep[13] = 1; bitrep[15] = 1;  //0x0005
 }
 
-void xor(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4,int bitrep[16]){
+int xor(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4){
 	//similar to not
-	if((*lArg1 == NULL) || (*lArg2 == NULL) || (*lArg3 == NULL) || (*lArg4 != NULL)){
-		exit(4); // ERROR: invalid amount of operands
-	}
-	if((*lArg1 != 'r') || (*lArg2 != 'r') || ((*lArg3 != 'r') && (*lArg3 != '#'))){
-		exit(4); //ERROR: invalid operand format
-	}
-	if((strlen(lArg1) != 2) || (strlen(lArg2) != 2)){
-		exit(4); //ERROR: invlaid operand format
-	}
-	if((*(lArg1+1) < '0' ) || (*(lArg1+1) > '7') || (*(lArg1+1) < '0') || (*(lArg2+1) > '7')){
-		exit(4); //ERROR: invalid operand format
-	}
-
-	if(*(lArg3) == 'r'){
-		//register
-		if((strlen(lArg3) != 2) || (*(lArg3+1) < '0') || (*(lArg3+1) > '7')){
-			exit(4); //ERROR: invalid operand format
-		}
-	}else{
-		//imm5
-		int check_num = toNum(lArg3);
-		if((check_num < -16) || (check_num > 15)){
-			exit(3); //invalid constant
-		}
-	}
-
-	bitrep[0] = 1; bitrep[3] = 1;
-	int regnum = (*(lArg1+1) - '0');
-	convertRegister(bitrep, regnum, 4);
-	regnum = (*(lArg2+1) - '0');
-	convertRegister(bitrep, regnum, 7);
-
-	if(*lArg3 == 'r'){
-		regnum = (*(lArg3+1) - '0');
-		convertRegister(bitrep, regnum, 13);
-	}else{
-		int imm = toNum(lArg3);
-		bitrep[10] = 1;
-		convertOffset(bitrep, imm, 11, 5);
-	}
 }
+
+
 
 
 
@@ -757,6 +776,8 @@ void createOutputObjFile(char * input, char * output) {
 	FILE * lInFile = fopen(input, "r");
 
 	do {
+		int bitrep[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
 		lRet = readAndParse(lInFile, lLine, &lLabel,
 							&lOpcode, &lArg1, &lArg2, &lArg3, &lArg4);
 		if (lRet != DONE && lRet != EMPTY_LINE) {
@@ -768,18 +789,49 @@ void createOutputObjFile(char * input, char * output) {
 			printf("lArg3 is %s\n", lArg3);
 			printf("lArg4 is %s\n\n", lArg4);
 
-			if (strcmp(lArg4, "\0") == 0) {
-				printf("lArg4 is '\0'");
-			}
-
-			//int translatedDec;
 
 			if (strcmp(lOpcode, "add") == 0) {
-				//add(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
-			} else if (strcmp(lOpcode, "and") == 0) {
-				int bitrep[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-				and(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
+				add(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
 			}
+
+			else if(strcmp(lOpcode, "brn") == 0) {
+				br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 0);
+			}
+			else if(strcmp(lOpcode, "brz") == 0) {
+				br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 1);
+			}
+			else if(strcmp(lOpcode, "brp") == 0) {
+				br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 2);
+			}
+			else if(strcmp(lOpcode, "br") == 0) {
+				br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 3);
+			}
+			else if(strcmp(lOpcode, "brzp") == 0) {
+				br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 4);
+			}
+			else if(strcmp(lOpcode, "brnp") == 0) {
+				br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 5);
+			}
+			else if(strcmp(lOpcode, "brnz") == 0) {
+				br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 6);
+			}
+			else if(strcmp(lOpcode, "brnzp") == 0) {
+				br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 7);
+			}
+			else if(strcmp(lOpcode, "halt") == 0) {
+				halt(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
+			}
+			else if(strcmp(lOpcode, "jmp") == 0) {
+				jmp(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
+			}
+			else if(strcmp(lOpcode, "jsrr") == 0) {
+					jmp(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
+			}
+
+			for(int i = 0; i < 16; i++) {
+				printf("%d", bitrep[i]);
+			}
+			printf("\n");
 
 			/*else if (strcmp(lOpcode, "brn") == 0) brn(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
 			else if (strcmp(lOpcode, "brp") == 0) brp(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4);
@@ -814,10 +866,10 @@ void createOutputObjFile(char * input, char * output) {
 			//printf("Hexadecimal for the line is: %s", hexadecimal);
 			//}
 
+			// Increment PC
+			Current = Current + 0x0002;
 		}
-		Current = Current + 0x0002;
-	}while (lRet != DONE);
-
+	} while (lRet != DONE);
 }
 
 
@@ -858,31 +910,13 @@ void createSymbolTable(FILE* inputFile) {
 						exit(3); //ERROR: invalid constant
 					}
 				}
-				if(strcmp(lOpcode, ".end") == 0){
-					return; //done
-				}
-
-				//check args
-				if((isOpcode(lArg1) != -1) || (isOpcode(lArg2) != -1) || (isOpcode(lArg3) != -1) || (isOpcode(lArg4) != -1)){
-					exit(1);
-				}
-
 				if(*lLabel != NULL){
 					//check if valid
-					//check if valid. if not,
-					//is it an instruction
-					if(isOpcode(lLabel) != -1){
-						exit(1); //ERROR: label is an instruction
-					}
-					if(isPseudo(lLabel) != -1){
-						exit(1); //ERROR: label is a pseudo-op
-					}
-
 
 					int i_sym = 0;
 					while(*(lLabel+i_sym) != NULL){
 						if(isalnum(*(lLabel+i_sym)) == false){
-							exit(4); //ERROR: invalid label format
+							goto next_address;
 						}
 						i_sym ++;
 					}
@@ -895,6 +929,7 @@ void createSymbolTable(FILE* inputFile) {
 						//copy into symbol table
 						symboltable[Tablesize].label[input] = *(lLabel + input);
 					}
+					symboltable[Tablesize].label[i_sym] = NULL; //null terminate char array
 					symboltable[Tablesize].location = cu_address;
 					Tablesize++;
 				}
@@ -911,7 +946,7 @@ void main(int argc, char *argv[]) {
 	char *input = argv[1];
 	char *output = argv[2];
 	// read in file
-	FILE *inputFile = fopen("source.asm", "r");
+	FILE *inputFile = fopen(input, "r");
 	// create output file
 	FILE *outputFile = fopen(output, "w");
 
