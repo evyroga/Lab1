@@ -597,7 +597,7 @@ void jsr(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 	}
 	int loca = 0;
 	for(int sym = 0; sym <Tablesize; sym++){
-		if(strcmp(lArg1, symboltable[sym].label)){
+		if(strcmp(lArg1, symboltable[sym].label) == 0){
 			loca = symboltable[sym].location; //get location (decimal)
 			goto FoundJSR;
 		}
@@ -705,7 +705,7 @@ void lea(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 	//check if label exists
 	int loca = 0;
 	for(int sym = 0; sym <Tablesize; sym++){
-		if(strcmp(lArg2, symboltable[sym].label)){
+		if(strcmp(lArg2, symboltable[sym].label) == 0){
 			loca = symboltable[sym].location; //get location (decimal)
 			goto Found;
 		}
@@ -715,7 +715,7 @@ void lea(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 	if((loca < (Current - 256)) || (loca > (Current + 255))){
 		exit(4); //ERROR: out of range
 	}
-	int pcOff = Current - loca; //current location - label location
+	int pcOff = loca - Current ; //current location - label location
 	bitrep[0] = 1; bitrep[1] = 1; bitrep[2] = 1;
 
 	int regnum = (*(lArg1+1) - '0');
@@ -985,13 +985,13 @@ void xor(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 }
 
 
-void createOutputObjFile(char * input, char * output) {
+void createOutputObjFile(char* input, char* output) {
 	char lLine[MAX_LINE_LENGTH + 1], *lLabel, *lOpcode, *lArg1,
 		        *lArg2, *lArg3, *lArg4;
 
 	int lRet;
 
-	FILE * lInFile = fopen(input, "r");
+	FILE * lInFile = fopen("source.asm", "r");
 
 	do {
         int bitrep[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -1064,15 +1064,19 @@ void createOutputObjFile(char * input, char * output) {
                 and(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
             }else if(strcmp(lOpcode, "jsr") == 0) {
                 jsr(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
+            }else if(strcmp(lOpcode, ".orig") == 0){
+                printf("%X", Current);
+            }else if(strcmp(lOpcode, ".fill") == 0){
+                // take first argument
             }else if(strcmp(lOpcode, ".end") == 0){
                 //done with reading
             }else{
                 printf("Not a valid opcode!");
                 exit(2);
             }
+            convertBReptoHex(bitrep, hexrep);
             //convert to hex here? and then write to thing
             //increment current address
-
             Current = Current + 0x0002;
 		}
 	}while (lRet != DONE);
@@ -1146,7 +1150,12 @@ void createSymbolTable(FILE* inputFile) {
 						//copy into symbol table
 						symboltable[Tablesize].label[input] = *(lLabel + input);
 					}
-					symboltable[Tablesize].location = cu_address;
+					if(strcmp(lOpcode, ".fill") == 0){
+					    int fill_address = toNum(lArg1);
+					    symboltable[Tablesize].location = fill_address;
+					}else {
+                        symboltable[Tablesize].location = cu_address;
+                    }
 					Tablesize++;
 				}
 				next_address:
@@ -1162,7 +1171,7 @@ void main(int argc, char *argv[]) {
 	// read in file
 	FILE *inputFile = fopen("source.asm", "r");
 	// create output file
-	FILE *outputFile = fopen(output, "w");
+	FILE *outputFile = fopen("output.obj", "w");
 
 	if(!inputFile) {
 		printf("Error; Cannot open input file %s\n", argv[1]);
@@ -1175,10 +1184,12 @@ void main(int argc, char *argv[]) {
 	// first pass: create Symbol Table
 	createSymbolTable(inputFile);
 
+
 	// second pass: assembly language to machine language
 	createOutputObjFile(input, output);
-
+/*
 	fclose(inputFile);
 	fclose(outputFile);
 	exit(0);
+ */
 }
