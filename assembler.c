@@ -565,9 +565,10 @@ void br_(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
     if (labelIndex != -1){
         int labelLocation = symboltable[labelIndex].location;
         int decOffset = labelLocation - Current;
+        int pcOffset = decOffset / 2;
         // check if PCoffset9 within range
         if (decOffset >= -256 && decOffset <= 255) {
-            convertOffset(bitrep, decOffset, 7, 9);
+            convertOffset(bitrep, pcOffset, 7, 9);
         }else{
             exit(3); // invalid constant
         }
