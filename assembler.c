@@ -519,7 +519,7 @@ void and(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
         brnz    6
         brnzp   7       */
 void br_(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3, char * lArg4,
-         int bitrep[16], int currLocation, int version) {
+         int bitrep[16], int version) {
 
     switch(version) {
         case 0:
@@ -1038,7 +1038,7 @@ void createOutputObjFile(char* input, FILE* output) {
 
             if(strcmp(lOpcode, ".orig") == 0){
                 fprintf(output, "0x%.4X\n", Current);
-                goto FoundOrig;
+                continue;
             }
 
             Current = Current + 0x0002;
@@ -1048,21 +1048,21 @@ void createOutputObjFile(char* input, FILE* output) {
             }else if(strcmp(lOpcode, "and") == 0){
                 and(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
             }else if(strcmp(lOpcode, "brn") == 0) {
-                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 0);
+                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, 0);
             }else if(strcmp(lOpcode, "brz") == 0) {
-                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 1);
+                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep,1);
             }else if(strcmp(lOpcode, "brp") == 0) {
-                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 2);
+                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep,2);
             }else if(strcmp(lOpcode, "br") == 0) {
-                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 3);
+                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep,3);
             }else if(strcmp(lOpcode, "brzp") == 0) {
-                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 4);
+                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, 4);
             }else if(strcmp(lOpcode, "brnp") == 0) {
-                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 5);
+                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, 5);
             }else if(strcmp(lOpcode, "brnz") == 0) {
-                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 6);
+                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, 6);
             }else if(strcmp(lOpcode, "brnzp") == 0) {
-                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, Current, 7);
+                br_(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep, 7);
             }else if(strcmp(lOpcode, "halt") == 0) {
                 halt(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
             }else if(strcmp(lOpcode, "jmp") == 0) {
@@ -1075,9 +1075,6 @@ void createOutputObjFile(char* input, FILE* output) {
                 ldw(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
             }else if(strcmp(lOpcode, "lea") == 0) {
                 lea(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
-                int printhex = convertBReptoInt(bitrep);
-                printf("0x%.4X\n", printhex);
-                return;
             }else if(strcmp(lOpcode, "nop") == 0) {
                 nop(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
             }else if(strcmp(lOpcode, "not") == 0) {
@@ -1104,16 +1101,16 @@ void createOutputObjFile(char* input, FILE* output) {
                 jsr(lLabel, lOpcode, lArg1, lArg2, lArg3, lArg4, bitrep);
             }else if(strcmp(lOpcode, ".fill") == 0){
                 int fill_num = toNum(lArg1);
-                printf("0x%.4X\n", fill_num); //CHECK TO fprintf
+                fprintf(output, "0x%.4X\n", fill_num); //CHECK TO fprintf
+                continue;
             }else if(strcmp(lOpcode, ".end") == 0){
                 return;
             }else{
                 printf("Not a valid opcode!");
                 exit(2);
             }
-		    FoundOrig:
-		    //print here
-		    return;
+            int inst = convertBReptoInt(bitrep);
+            fprintf(output, "0x%.4X\n", inst);
 		}
 	}while (lRet != DONE);
 }
