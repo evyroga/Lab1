@@ -979,6 +979,11 @@ void trap(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg
 	if((*(lArg1) == NULL) || (*lArg2 != NULL) || (*lArg3 != NULL) || (*lArg4 != NULL)){
 		exit(4); //ERROR: invalid amount of operands
 	}
+	int trapvec = toNum(lArg1);
+	if (trapvec < 0) {
+		exit(3); // trap vector must be non-negative
+	}
+
 	if(strcmp(lArg1, "x25") != 0){
 		exit(4); //ERROR: invalid operand (?)
 	}
@@ -1047,7 +1052,7 @@ void createOutputObjFile(char* input, FILE* output) {
 
 	int lRet;
 
-	FILE * lInFile = fopen("source.asm", "r");
+	FILE * lInFile = fopen(input, "r");
 
 	do {
         int bitrep[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -1236,9 +1241,9 @@ void main(int argc, char *argv[]) {
 	char *input = argv[1];
 	char *output = argv[2];
 	// read in file
-	FILE *inputFile = fopen("source.asm", "r");
+	FILE *inputFile = fopen(input, "r");
 	// create output file
-	FILE *outputFile = fopen("output.obj", "w");
+	FILE *outputFile = fopen(output, "w");
 
 	if(!inputFile) {
 		printf("Error; Cannot open input file %s\n", argv[1]);
@@ -1250,7 +1255,7 @@ void main(int argc, char *argv[]) {
 
 	// first pass: create Symbol Table
 	createSymbolTable(inputFile);
-    fclose(inputFile);
+    	fclose(inputFile);
 
 	// second pass: assembly language to machine language
 	createOutputObjFile(input, outputFile);
