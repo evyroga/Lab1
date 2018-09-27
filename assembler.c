@@ -1,7 +1,7 @@
 /*
  *      Name 1: Vivian Nguyen
  *      Name 2: Morgan Murrell
- *      UTEID 1:
+ *      UTEID 1: vmn296
  *      UTEID 2: mmm6855
  *
  *      assembler.c
@@ -916,7 +916,7 @@ void stb(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 	if((*lArg1 == NULL) || (*lArg2 == NULL) || (*lArg3 == NULL) || (*lArg4 != NULL)){
 		exit(4);
 	}
-	if((*lArg1 != 'r') || (*lArg2 != 'r') || (*lArg3 != '#')){
+	if((*lArg1 != 'r') || (*lArg2 != 'r') || ((*lArg3 != '#') && (*lArg3 != 'x'))){
 		exit(4); //ERROR: invalid operand format
 	}
 	if((strlen(lArg1) != 2) || (strlen(lArg2) != 2)){
@@ -948,7 +948,7 @@ void stw(char * lLabel, char * lOpcode, char * lArg1, char * lArg2, char * lArg3
 	if((*lArg1 == NULL) || (*lArg2 == NULL) || (*lArg3 == NULL) || (*lArg4 != NULL)){
 		exit(4);
 	}
-	if((*lArg1 != 'r') || (*lArg2 != 'r') || (*lArg3 != '#')){
+	if((*lArg1 != 'r') || (*lArg2 != 'r') || ((*lArg3 != '#') && (*lArg3 != 'x'))){
 		exit(4); //ERROR: invalid operand format
 	}
 	if((strlen(lArg1) != 2) || (strlen(lArg2) != 2)){
